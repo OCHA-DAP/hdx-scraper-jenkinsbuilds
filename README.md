@@ -1,12 +1,11 @@
 # HDX Scraper ELK Stats
 
 Connects to OpenSearch/ELK to retrieve Jenkins build statistics for HDX scraper
-pipelines and outputs trigger type analysis (timer vs. user-triggered builds).
+pipelines and displays all build records as a formatted table in the console.
 
 ## Prerequisites
 
 - Python 3.13
-- Java 17+ (for JPype/Jenkins cron hash resolution)
 - OpenSearch API key
 
 ## Development
@@ -31,6 +30,10 @@ The OpenSearch connection and query parameters are configured in
 ## Testing
 
     uv run pytest
+
+Tests cover the `ElkRetriever.process()` method using mocked OpenSearch responses,
+including nested and flat document formats, empty results, timestamp conversion,
+and multi-record DataFrames.
 
 ## Code Style
 

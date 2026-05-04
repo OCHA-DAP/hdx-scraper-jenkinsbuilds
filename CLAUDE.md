@@ -2,14 +2,13 @@
 
 ## Project Overview
 
-**hdx-scraper-elkstats** connects to an OpenSearch/ELK cluster to retrieve Jenkins build statistics for HDX scraper pipelines and classifies each build's trigger type (timer-scheduled vs. user-initiated). It uses JPype to call Jenkins Hash and cron-utils Java libraries to resolve `H`-placeholder cron expressions.
+**hdx-scraper-elkstats** connects to an OpenSearch/ELK cluster to retrieve Jenkins build statistics for HDX scraper pipelines and displays all build records as a formatted table in the console.
 
 ## Key Files
 
 - `src/hdx/scraper/elkstats/__main__.py` — entry point; loads config, runs retriever, prints summary table
-- `src/hdx/scraper/elkstats/elk_retriever.py` — core `ElkRetriever` class (JVM setup, OpenSearch query, trigger classification)
-- `src/hdx/scraper/elkstats/config/project_configuration.yaml` — OpenSearch host, index pattern, time range, tolerance
-- `src/hdx/scraper/elkstats/jars/` — bundled Java JARs (`jenkins-core`, `cron-utils`, `slf4j-api`)
+- `src/hdx/scraper/elkstats/elk_retriever.py` — core `ElkRetriever` class (OpenSearch query, DataFrame construction)
+- `src/hdx/scraper/elkstats/config/project_configuration.yaml` — OpenSearch host, index pattern, time range
 
 ## Running
 
@@ -19,7 +18,6 @@ uv run python -m hdx.scraper.elkstats
 
 Requires:
 - `APIKEY` env var — OpenSearch API key for `api.elk.aws.ahconu.org`
-- Java (OpenJDK 17+) available for JPype JVM startup
 
 ## Testing
 
@@ -27,7 +25,7 @@ Requires:
 uv run pytest
 ```
 
-The single test (`tests/test_elkstats.py`) verifies that Jenkins Hash correctly resolves `H` placeholders in cron expressions using known seed/expected-value pairs. It starts the JVM directly via JPype.
+Tests in `tests/test_elk_retriever.py` cover `ElkRetriever.process()` using mocked OpenSearch responses.
 
 ## Code Style
 
