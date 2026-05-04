@@ -13,7 +13,9 @@ class ElkRetriever:
         self._index_pattern = configuration["index_pattern"]
         self._project_prefix = configuration["project_prefix"]
         self._time_range = configuration.get("time_range", "now-1M")
-        self._opensearch_host = configuration.get("opensearch_host", "api.elk.aws.ahconu.org")
+        self._opensearch_host = configuration.get(
+            "opensearch_host", "api.elk.aws.ahconu.org"
+        )
         self._opensearch_port = configuration.get("opensearch_port", 443)
         self._client = self._setup_client()
 
@@ -46,8 +48,19 @@ class ElkRetriever:
             "query": {
                 "bool": {
                     "must": [
-                        {"prefix": {"jenkins.projectName.keyword": self._project_prefix}},
-                        {"range": {"@buildTimestamp": {"gte": self._time_range, "lte": "now"}}},
+                        {
+                            "prefix": {
+                                "jenkins.projectName.keyword": self._project_prefix
+                            }
+                        },
+                        {
+                            "range": {
+                                "@buildTimestamp": {
+                                    "gte": self._time_range,
+                                    "lte": "now",
+                                }
+                            }
+                        },
                     ]
                 }
             },
@@ -73,14 +86,20 @@ class ElkRetriever:
         all_hits = []
         for hit in results:
             source = hit["_source"]
-            all_hits.append({
-                "projectName": self._get_field(source, "projectName", "jenkins.projectName"),
-                "result": self._get_field(source, "result", "jenkins.result"),
-                "buildTimestamp": source.get("@buildTimestamp"),
-                "buildDuration": self._get_field(source, "buildDuration", "jenkins.buildDuration"),
-                "cause": source.get("jenkins.trigger.cause"),
-                "user": source.get("jenkins.trigger.related"),
-            })
+            all_hits.append(
+                {
+                    "projectName": self._get_field(
+                        source, "projectName", "jenkins.projectName"
+                    ),
+                    "result": self._get_field(source, "result", "jenkins.result"),
+                    "buildTimestamp": source.get("@buildTimestamp"),
+                    "buildDuration": self._get_field(
+                        source, "buildDuration", "jenkins.buildDuration"
+                    ),
+                    "cause": source.get("jenkins.trigger.cause"),
+                    "user": source.get("jenkins.trigger.related"),
+                }
+            )
 
         df = pd.DataFrame(all_hits)
 

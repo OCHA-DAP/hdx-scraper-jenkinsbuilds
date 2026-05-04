@@ -1,14 +1,14 @@
 from unittest.mock import patch
 
 import pandas as pd
-import pytest
 
 from hdx.scraper.elkstats.elk_retriever import ElkRetriever
 
 
 def make_retriever(sample_configuration):
-    with patch("hdx.scraper.elkstats.elk_retriever.OpenSearch"), patch(
-        "hdx.scraper.elkstats.elk_retriever.getenv", return_value="test-api-key"
+    with (
+        patch("hdx.scraper.elkstats.elk_retriever.OpenSearch"),
+        patch("hdx.scraper.elkstats.elk_retriever.getenv", return_value="test-api-key"),
     ):
         return ElkRetriever(sample_configuration)
 
@@ -96,4 +96,11 @@ def test_process_multiple_hits(sample_configuration):
         df = retriever.process()
 
     assert len(df) == 2
-    assert set(df.columns) == {"projectName", "result", "buildTimestamp", "buildDuration", "cause", "user"}
+    assert set(df.columns) == {
+        "projectName",
+        "result",
+        "buildTimestamp",
+        "buildDuration",
+        "cause",
+        "user",
+    }

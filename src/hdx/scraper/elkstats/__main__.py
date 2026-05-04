@@ -28,7 +28,9 @@ def main() -> None:
 
     if not df.empty:
         print(f"Successfully retrieved {len(df)} builds.\n")
-        with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", None):
+        with pd.option_context(
+            "display.max_rows", None, "display.max_columns", None, "display.width", None
+        ):
             print(df.fillna("").to_string(index=False))
 
 
