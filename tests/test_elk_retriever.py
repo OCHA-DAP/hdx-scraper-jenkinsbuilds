@@ -12,7 +12,7 @@ def make_retriever(sample_configuration):
     config_mock.get_hdx_site_url.return_value = "https://data.humdata.org"
 
     download_path = MagicMock()
-    download_path.rename.return_value = Path("/tmp/ElkStats.csv")
+    download_path.rename.return_value = Path("/tmp/jenkins_builds.csv")
 
     downloader_mock = MagicMock()
     downloader_mock.download_file.return_value = download_path
@@ -118,7 +118,9 @@ def test_process_uploads_dump(sample_configuration):
     retriever = make_retriever(sample_configuration)
     resource_mock = run_process(retriever, [make_hit(NESTED_SOURCE)])
     retriever._downloader.download_file.assert_called_once()
-    resource_mock.set_file_to_upload.assert_called_once_with(Path("/tmp/ElkStats.csv"))
+    resource_mock.set_file_to_upload.assert_called_once_with(
+        Path("/tmp/jenkins_builds.csv")
+    )
     resource_mock.update_in_hdx.assert_called_once()
 
 
