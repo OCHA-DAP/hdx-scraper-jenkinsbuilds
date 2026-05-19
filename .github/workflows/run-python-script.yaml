@@ -28,7 +28,7 @@ jobs:
           PREPREFIX: ${{ vars.HDX_USER_AGENT_PREPREFIX }}
           USER_AGENT: ${{ vars.USER_AGENT }}
           APIKEY: ${{ secrets.ELK_API_KEY }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ GOOGLE_SERVICE_ACCOUNT }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
 
         # 'uv run' executes the command inside the environment created by 'uv sync'
         run: |
