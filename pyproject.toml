@@ -9,7 +9,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hdx-scraper-elkstats"
+name = "hdx-scraper-jenkinsbuilds"
 dynamic = ["version"]
 requires-python = ">=3.13"
 dependencies = [
@@ -29,7 +29,7 @@ dev = [
 ]
 
 [project.scripts]
-run = "hdx.scraper.elkstats.__main__:main"
+run = "hdx.scraper.jenkinsbuilds.__main__:main"
 
 # ----------------------------------------------------------------------------
 # Hatchling (Build & Versioning)
@@ -43,7 +43,7 @@ local_scheme = "no-local-version"
 version_scheme = "python-simplified-semver"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/hdx/scraper/elkstats/_version.py"
+version-file = "src/hdx/scraper/jenkinsbuilds/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hdx"]
@@ -71,7 +71,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-local-folder = ["hdx.scraper.elkstats"]
+known-local-folder = ["hdx.scraper.jenkinsbuilds"]
 known-third-party = [
     "hdx.utilities",
 ]

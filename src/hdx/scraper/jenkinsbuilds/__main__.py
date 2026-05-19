@@ -15,12 +15,12 @@ from hdx.facades.simple import facade
 from hdx.utilities.downloader import Download
 from hdx.utilities.path import script_dir_plus_file
 
-from hdx.scraper.elkstats._version import __version__
-from hdx.scraper.elkstats.elk_retriever import ElkRetriever
+from hdx.scraper.jenkinsbuilds._version import __version__
+from hdx.scraper.jenkinsbuilds.elk_retriever import ElkRetriever
 
 logger = logging.getLogger(__name__)
 
-_LOOKUP = "hdx-scraper-elkstats"
+_LOOKUP = "hdx-scraper-jenkinsbuilds"
 
 
 def main() -> None:

@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from hdx.scraper.elkstats.elk_retriever import ElkRetriever
+from hdx.scraper.jenkinsbuilds.elk_retriever import ElkRetriever
 
 
 def make_retriever(sample_configuration):
@@ -18,8 +18,11 @@ def make_retriever(sample_configuration):
     downloader_mock.download_file.return_value = download_path
 
     with (
-        patch("hdx.scraper.elkstats.elk_retriever.OpenSearch"),
-        patch("hdx.scraper.elkstats.elk_retriever.getenv", return_value="test-api-key"),
+        patch("hdx.scraper.jenkinsbuilds.elk_retriever.OpenSearch"),
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.getenv",
+            return_value="test-api-key",
+        ),
     ):
         return ElkRetriever(config_mock, downloader_mock)
 
@@ -56,10 +59,11 @@ def run_process(retriever, scan_results):
 
     with (
         patch(
-            "hdx.scraper.elkstats.elk_retriever.scan", return_value=iter(scan_results)
+            "hdx.scraper.jenkinsbuilds.elk_retriever.scan",
+            return_value=iter(scan_results),
         ),
         patch(
-            "hdx.scraper.elkstats.elk_retriever.Dataset.read_from_hdx",
+            "hdx.scraper.jenkinsbuilds.elk_retriever.Dataset.read_from_hdx",
             return_value=dataset_mock,
         ),
         patch.object(retriever, "_upload_to_drive"),
@@ -129,14 +133,16 @@ def _make_drive_service(existing_files):
 def _run_upload_to_drive(retriever, service_mock):
     with (
         patch(
-            "hdx.scraper.elkstats.elk_retriever.getenv",
+            "hdx.scraper.jenkinsbuilds.elk_retriever.getenv",
             return_value='{"type": "service_account"}',
         ),
         patch(
-            "hdx.scraper.elkstats.elk_retriever.Credentials.from_service_account_info"
+            "hdx.scraper.jenkinsbuilds.elk_retriever.Credentials.from_service_account_info"
         ),
-        patch("hdx.scraper.elkstats.elk_retriever.build", return_value=service_mock),
-        patch("hdx.scraper.elkstats.elk_retriever.MediaFileUpload"),
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.build", return_value=service_mock
+        ),
+        patch("hdx.scraper.jenkinsbuilds.elk_retriever.MediaFileUpload"),
     ):
         retriever._upload_to_drive(Path("/tmp/test.csv"))
 

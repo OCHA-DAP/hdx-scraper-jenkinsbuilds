@@ -2,18 +2,18 @@
 
 ## Project Overview
 
-**hdx-scraper-elkstats** connects to an OpenSearch/ELK cluster to retrieve Jenkins build statistics for HDX scraper pipelines and displays all build records as a formatted table in the console.
+**hdx-scraper-jenkinsbuilds** connects to an OpenSearch/ELK cluster to retrieve Jenkins build statistics for HDX scraper pipelines and displays all build records as a formatted table in the console.
 
 ## Key Files
 
-- `src/hdx/scraper/elkstats/__main__.py` — entry point; loads config, runs retriever, prints summary table
-- `src/hdx/scraper/elkstats/elk_retriever.py` — core `ElkRetriever` class (OpenSearch query, DataFrame construction)
-- `src/hdx/scraper/elkstats/config/project_configuration.yaml` — OpenSearch host, index pattern, time range
+- `src/hdx/scraper/jenkinsbuilds/__main__.py` — entry point; loads config, runs retriever, prints summary table
+- `src/hdx/scraper/jenkinsbuilds/elk_retriever.py` — core `ElkRetriever` class (OpenSearch query, DataFrame construction)
+- `src/hdx/scraper/jenkinsbuilds/config/project_configuration.yaml` — OpenSearch host, index pattern, time range
 
 ## Running
 
 ```bash
-uv run python -m hdx.scraper.elkstats
+uv run python -m hdx.scraper.jenkinsbuilds
 ```
 
 Requires:

@@ -1,4 +1,4 @@
-# HDX Scraper ELK Stats
+# HDX Scraper Jenkins Builds
 
 Connects to OpenSearch/ELK to retrieve Jenkins build statistics for HDX scraper
 pipelines and displays all build records as a formatted table in the console.
@@ -20,12 +20,12 @@ Set the required environment variable:
 
 Run:
 
-    uv run python -m hdx.scraper.elkstats
+    uv run python -m hdx.scraper.jenkinsbuilds
 
 ## Configuration
 
 The OpenSearch connection and query parameters are configured in
-`src/hdx/scraper/elkstats/config/project_configuration.yaml`.
+`src/hdx/scraper/jenkinsbuilds/config/project_configuration.yaml`.
 
 ## Testing
 

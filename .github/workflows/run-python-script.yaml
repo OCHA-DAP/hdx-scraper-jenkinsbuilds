@@ -32,7 +32,7 @@ jobs:
 
         # 'uv run' executes the command inside the environment created by 'uv sync'
         run: |
-          uv run --frozen python -m hdx.scraper.elkstats
+          uv run --frozen python -m hdx.scraper.jenkinsbuilds
 
       - name: Send mail
         if: failure()

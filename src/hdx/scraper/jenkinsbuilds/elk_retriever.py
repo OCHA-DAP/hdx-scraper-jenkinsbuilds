@@ -110,7 +110,7 @@ class ElkRetriever:
                 }
             )
 
-        dataset = Dataset.read_from_hdx("elk-stats")
+        dataset = Dataset.read_from_hdx("jenkins-builds")
         resource = dataset.get_resource()
         schema = [
             {"id": "projectName", "type": "text"},
@@ -128,7 +128,7 @@ class ElkRetriever:
             f"{self._configuration.get_hdx_site_url()}/datastore/dump/{resource_id}"
         )
         file = self._downloader.download_file(dump_url)
-        file = file.rename(file.parent / "ElkStats.csv")
+        file = file.rename(file.parent / "jenkins_builds.csv")
         resource.set_file_to_upload(file)
         resource.update_in_hdx()
         self._upload_to_drive(file)

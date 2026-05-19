@@ -608,7 +608,7 @@ wheels = [
 ]
 
 [[package]]
-name = "hdx-scraper-elkstats"
+name = "hdx-scraper-jenkinsbuilds"
 source = { editable = "." }
 dependencies = [
     { name = "google-api-python-client" },
