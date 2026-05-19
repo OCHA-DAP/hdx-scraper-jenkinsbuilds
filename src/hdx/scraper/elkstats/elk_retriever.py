@@ -1,7 +1,14 @@
+import json
 import logging
 from os import getenv
+from pathlib import Path
 
-import pandas as pd
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from hdx.api.configuration import Configuration
+from hdx.data.dataset import Dataset
+from hdx.utilities.downloader import Download
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from opensearchpy.helpers import scan
 
@@ -9,20 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class ElkRetriever:
-    def __init__(self, configuration: dict):
-        self._index_pattern = configuration["index_pattern"]
-        self._project_prefix = configuration["project_prefix"]
-        self._time_range = configuration.get("time_range", "now-1M")
-        self._opensearch_host = configuration.get(
-            "opensearch_host", "api.elk.aws.ahconu.org"
-        )
-        self._opensearch_port = configuration.get("opensearch_port", 443)
+    def __init__(self, configuration: Configuration, downloader: Download):
+        self._configuration = configuration
+        self._downloader = downloader
         self._client = self._setup_client()
 
     def _setup_client(self) -> OpenSearch:
         api_key = getenv("APIKEY")
         return OpenSearch(
-            hosts=[{"host": self._opensearch_host, "port": self._opensearch_port}],
+            hosts=[
+                {
+                    "host": self._configuration["opensearch_host"],
+                    "port": self._configuration["opensearch_port"],
+                }
+            ],
             connection_class=RequestsHttpConnection,
             http_compress=True,
             use_ssl=True,
@@ -43,20 +50,22 @@ class ElkRetriever:
             return doc["jenkins"].get(nested_key)
         return doc.get(flat_key)
 
-    def process(self) -> pd.DataFrame:
+    def process(self) -> None:
         query = {
             "query": {
                 "bool": {
                     "must": [
                         {
                             "prefix": {
-                                "jenkins.projectName.keyword": self._project_prefix
+                                "jenkins.projectName.keyword": self._configuration[
+                                    "project_prefix"
+                                ]
                             }
                         },
                         {
                             "range": {
                                 "@buildTimestamp": {
-                                    "gte": self._time_range,
+                                    "gte": self._configuration["time_range"],
                                     "lte": "now",
                                 }
                             }
@@ -78,7 +87,7 @@ class ElkRetriever:
         results = scan(
             client=self._client,
             query=query,
-            index=self._index_pattern,
+            index=self._configuration["index_pattern"],
             scroll="2m",
             size=1000,
         )
@@ -101,14 +110,58 @@ class ElkRetriever:
                 }
             )
 
-        df = pd.DataFrame(all_hits)
+        dataset = Dataset.read_from_hdx("elk-stats")
+        resource = dataset.get_resource()
+        schema = [
+            {"id": "projectName", "type": "text"},
+            {"id": "result", "type": "text"},
+            {"id": "buildTimestamp", "type": "timestamp"},
+            {"id": "buildDuration", "type": "text"},
+            {"id": "cause", "type": "text"},
+            {"id": "user", "type": "text"},
+        ]
+        resource.create_datastore(schema, ("projectName", "buildTimestamp"))
+        resource.update_datastore(all_hits)
 
-        if df.empty:
-            logger.info("No builds found.")
-            return df
+        resource_id = resource["id"]
+        dump_url = (
+            f"{self._configuration.get_hdx_site_url()}/datastore/dump/{resource_id}"
+        )
+        file = self._downloader.download_file(dump_url)
+        file = file.rename(file.parent / "ElkStats.csv")
+        resource.set_file_to_upload(file)
+        resource.update_in_hdx()
+        self._upload_to_drive(file)
 
-        if not pd.api.types.is_datetime64_any_dtype(df["buildTimestamp"]):
-            df["buildTimestamp"] = pd.to_datetime(df["buildTimestamp"])
-
-        logger.info(f"Successfully retrieved {len(df)} builds.")
-        return df
+    def _upload_to_drive(self, file: Path) -> None:
+        credentials = Credentials.from_service_account_info(
+            json.loads(getenv("GOOGLE_SERVICE_ACCOUNT")),
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+        service = build("drive", "v3", credentials=credentials)
+        folder_id = "1x8-HeuhrwEWYeoCZdbCc7DKD-ONPSVHU"
+        media = MediaFileUpload(str(file), mimetype="text/csv")
+        existing = (
+            service.files()
+            .list(
+                q=f"name='{file.name}' and '{folder_id}' in parents and trashed=false",
+                fields="files(id)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+            )
+            .execute()
+            .get("files", [])
+        )
+        if existing:
+            service.files().update(
+                fileId=existing[0]["id"],
+                media_body=media,
+                supportsAllDrives=True,
+            ).execute()
+        else:
+            service.files().create(
+                body={"name": file.name, "parents": [folder_id]},
+                media_body=media,
+                fields="id",
+                supportsAllDrives=True,
+            ).execute()

@@ -1,16 +1,27 @@
-from unittest.mock import patch
-
-import pandas as pd
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from hdx.scraper.elkstats.elk_retriever import ElkRetriever
 
 
 def make_retriever(sample_configuration):
+    config_mock = MagicMock()
+    config_mock.__getitem__ = MagicMock(
+        side_effect=lambda key: sample_configuration[key]
+    )
+    config_mock.get_hdx_site_url.return_value = "https://data.humdata.org"
+
+    download_path = MagicMock()
+    download_path.rename.return_value = Path("/tmp/ElkStats.csv")
+
+    downloader_mock = MagicMock()
+    downloader_mock.download_file.return_value = download_path
+
     with (
         patch("hdx.scraper.elkstats.elk_retriever.OpenSearch"),
         patch("hdx.scraper.elkstats.elk_retriever.getenv", return_value="test-api-key"),
     ):
-        return ElkRetriever(sample_configuration)
+        return ElkRetriever(config_mock, downloader_mock)
 
 
 def make_hit(source: dict) -> dict:
@@ -38,69 +49,109 @@ FLAT_SOURCE = {
 }
 
 
+def run_process(retriever, scan_results):
+    resource_mock = MagicMock()
+    dataset_mock = MagicMock()
+    dataset_mock.get_resource.return_value = resource_mock
+
+    with (
+        patch(
+            "hdx.scraper.elkstats.elk_retriever.scan", return_value=iter(scan_results)
+        ),
+        patch(
+            "hdx.scraper.elkstats.elk_retriever.Dataset.read_from_hdx",
+            return_value=dataset_mock,
+        ),
+        patch.object(retriever, "_upload_to_drive"),
+    ):
+        retriever.process()
+
+    return resource_mock
+
+
 def test_process_empty_results(sample_configuration):
     retriever = make_retriever(sample_configuration)
-    with patch("hdx.scraper.elkstats.elk_retriever.scan", return_value=iter([])):
-        df = retriever.process()
-
-    assert df.empty
+    resource_mock = run_process(retriever, [])
+    resource_mock.update_datastore.assert_called_once_with([])
 
 
 def test_process_nested_format(sample_configuration):
     retriever = make_retriever(sample_configuration)
-    with patch(
-        "hdx.scraper.elkstats.elk_retriever.scan",
-        return_value=iter([make_hit(NESTED_SOURCE)]),
-    ):
-        df = retriever.process()
-
-    assert len(df) == 1
-    assert df.iloc[0]["projectName"] == "hdx-scraper-prod-run-acled"
-    assert df.iloc[0]["result"] == "SUCCESS"
-    assert df.iloc[0]["buildDuration"] == 120000
-    assert df.iloc[0]["cause"] == "timer"
-    assert pd.isna(df.iloc[0]["user"])
+    resource_mock = run_process(retriever, [make_hit(NESTED_SOURCE)])
+    hits = resource_mock.update_datastore.call_args[0][0]
+    assert len(hits) == 1
+    assert hits[0]["projectName"] == "hdx-scraper-prod-run-acled"
+    assert hits[0]["result"] == "SUCCESS"
+    assert hits[0]["buildDuration"] == 120000
+    assert hits[0]["cause"] == "timer"
+    assert hits[0]["user"] is None
 
 
 def test_process_flat_format(sample_configuration):
     retriever = make_retriever(sample_configuration)
-    with patch(
-        "hdx.scraper.elkstats.elk_retriever.scan",
-        return_value=iter([make_hit(FLAT_SOURCE)]),
-    ):
-        df = retriever.process()
-
-    assert len(df) == 1
-    assert df.iloc[0]["projectName"] == "hdx-scraper-prod-run-fts"
-    assert df.iloc[0]["result"] == "FAILURE"
-    assert df.iloc[0]["user"] == "jdoe"
-
-
-def test_process_timestamp_converted_to_datetime(sample_configuration):
-    retriever = make_retriever(sample_configuration)
-    with patch(
-        "hdx.scraper.elkstats.elk_retriever.scan",
-        return_value=iter([make_hit(NESTED_SOURCE)]),
-    ):
-        df = retriever.process()
-
-    assert pd.api.types.is_datetime64_any_dtype(df["buildTimestamp"])
+    resource_mock = run_process(retriever, [make_hit(FLAT_SOURCE)])
+    hits = resource_mock.update_datastore.call_args[0][0]
+    assert len(hits) == 1
+    assert hits[0]["projectName"] == "hdx-scraper-prod-run-fts"
+    assert hits[0]["result"] == "FAILURE"
+    assert hits[0]["user"] == "jdoe"
 
 
 def test_process_multiple_hits(sample_configuration):
     retriever = make_retriever(sample_configuration)
-    with patch(
-        "hdx.scraper.elkstats.elk_retriever.scan",
-        return_value=iter([make_hit(NESTED_SOURCE), make_hit(FLAT_SOURCE)]),
-    ):
-        df = retriever.process()
-
-    assert len(df) == 2
-    assert set(df.columns) == {
-        "projectName",
-        "result",
-        "buildTimestamp",
-        "buildDuration",
-        "cause",
-        "user",
+    resource_mock = run_process(
+        retriever, [make_hit(NESTED_SOURCE), make_hit(FLAT_SOURCE)]
+    )
+    hits = resource_mock.update_datastore.call_args[0][0]
+    assert len(hits) == 2
+    assert {h["projectName"] for h in hits} == {
+        "hdx-scraper-prod-run-acled",
+        "hdx-scraper-prod-run-fts",
     }
+
+
+def test_process_uploads_dump(sample_configuration):
+    retriever = make_retriever(sample_configuration)
+    resource_mock = run_process(retriever, [make_hit(NESTED_SOURCE)])
+    retriever._downloader.download_file.assert_called_once()
+    resource_mock.set_file_to_upload.assert_called_once_with(Path("/tmp/ElkStats.csv"))
+    resource_mock.update_in_hdx.assert_called_once()
+
+
+def _make_drive_service(existing_files):
+    service_mock = MagicMock()
+    service_mock.files.return_value.list.return_value.execute.return_value = {
+        "files": existing_files
+    }
+    return service_mock
+
+
+def _run_upload_to_drive(retriever, service_mock):
+    with (
+        patch(
+            "hdx.scraper.elkstats.elk_retriever.getenv",
+            return_value='{"type": "service_account"}',
+        ),
+        patch(
+            "hdx.scraper.elkstats.elk_retriever.Credentials.from_service_account_info"
+        ),
+        patch("hdx.scraper.elkstats.elk_retriever.build", return_value=service_mock),
+        patch("hdx.scraper.elkstats.elk_retriever.MediaFileUpload"),
+    ):
+        retriever._upload_to_drive(Path("/tmp/test.csv"))
+
+
+def test_upload_to_drive_creates_new_file(sample_configuration):
+    retriever = make_retriever(sample_configuration)
+    service_mock = _make_drive_service([])
+    _run_upload_to_drive(retriever, service_mock)
+    service_mock.files.return_value.create.assert_called_once()
+    service_mock.files.return_value.update.assert_not_called()
+
+
+def test_upload_to_drive_overwrites_existing_file(sample_configuration):
+    retriever = make_retriever(sample_configuration)
+    service_mock = _make_drive_service([{"id": "existing-file-id"}])
+    _run_upload_to_drive(retriever, service_mock)
+    service_mock.files.return_value.update.assert_called_once()
+    service_mock.files.return_value.create.assert_not_called()

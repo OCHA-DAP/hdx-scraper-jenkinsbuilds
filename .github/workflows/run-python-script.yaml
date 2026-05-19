@@ -23,8 +23,12 @@ jobs:
 
       - name: Run script
         env:
-          APIKEY: ${{ secrets.ELK_API_KEY }}
+          HDX_SITE: ${{ vars.HDX_SITE }}
+          HDX_KEY: ${{ secrets.HDX_BOT_SCRAPERS_API_TOKEN }}
           PREPREFIX: ${{ vars.HDX_USER_AGENT_PREPREFIX }}
+          USER_AGENT: ${{ vars.USER_AGENT }}
+          APIKEY: ${{ secrets.ELK_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ GOOGLE_SERVICE_ACCOUNT }}
 
         # 'uv run' executes the command inside the environment created by 'uv sync'
         run: |
