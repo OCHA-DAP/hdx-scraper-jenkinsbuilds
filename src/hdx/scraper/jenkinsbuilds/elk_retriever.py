@@ -81,6 +81,13 @@ class ElkRetriever:
                 "jenkins.trigger.cause",
                 "jenkins.trigger.related",
             ],
+            "sort": [
+                {
+                    "@buildTimestamp": {
+                        "order": "desc"
+                    }
+                }
+            ]
         }
 
         logger.info("Executing scan query with OpenSearch...")
@@ -93,7 +100,7 @@ class ElkRetriever:
         )
 
         all_hits = []
-        for hit in results:
+        for hit in sorted(results, key=lambda x: x["_source"]["@buildTimestamp"]):
             source = hit["_source"]
             all_hits.append(
                 {
