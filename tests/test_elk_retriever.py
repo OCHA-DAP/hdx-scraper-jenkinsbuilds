@@ -35,7 +35,7 @@ NESTED_SOURCE = {
     "jenkins": {
         "projectName": "hdx-scraper-prod-run-acled",
         "result": "SUCCESS",
-        "buildDuration": 120000,
+        "buildDuration": 450000,
     },
     "@buildTimestamp": "2026-04-01T10:00:00",
     "jenkins.trigger.cause": "timer",
@@ -45,7 +45,7 @@ NESTED_SOURCE = {
 FLAT_SOURCE = {
     "jenkins.projectName": "hdx-scraper-prod-run-fts",
     "jenkins.result": "FAILURE",
-    "jenkins.buildDuration": 60000,
+    "jenkins.buildDuration": 1800000,
     "@buildTimestamp": "2026-04-01T11:00:00",
     "jenkins.trigger.cause": "user",
     "jenkins.trigger.related": "jdoe",
@@ -86,7 +86,7 @@ def test_process_nested_format(sample_configuration):
     assert len(hits) == 1
     assert hits[0]["projectName"] == "hdx-scraper-prod-run-acled"
     assert hits[0]["result"] == "SUCCESS"
-    assert hits[0]["buildDuration"] == 2.0
+    assert hits[0]["buildDuration"] == 7.5
     assert hits[0]["cause"] == "timer"
     assert hits[0]["user"] is None
 
