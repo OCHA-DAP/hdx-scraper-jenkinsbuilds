@@ -86,7 +86,7 @@ def test_process_nested_format(sample_configuration):
     assert len(hits) == 1
     assert hits[0]["projectName"] == "hdx-scraper-prod-run-acled"
     assert hits[0]["result"] == "SUCCESS"
-    assert hits[0]["buildDuration"] == 120000
+    assert hits[0]["buildDuration"] == 2.0
     assert hits[0]["cause"] == "timer"
     assert hits[0]["user"] is None
 

@@ -51,6 +51,8 @@ class ElkRetriever:
         return doc.get(flat_key)
 
     def process(self) -> None:
+        backpopulate = getenv("BACKPOPULATE") == "Y"
+        time_range = "now-6M" if backpopulate else self._configuration["time_range"]
         query = {
             "query": {
                 "bool": {
@@ -65,7 +67,7 @@ class ElkRetriever:
                         {
                             "range": {
                                 "@buildTimestamp": {
-                                    "gte": self._configuration["time_range"],
+                                    "gte": time_range,
                                     "lte": "now",
                                 }
                             }
@@ -81,13 +83,6 @@ class ElkRetriever:
                 "jenkins.trigger.cause",
                 "jenkins.trigger.related",
             ],
-            "sort": [
-                {
-                    "@buildTimestamp": {
-                        "order": "desc"
-                    }
-                }
-            ]
         }
 
         logger.info("Executing scan query with OpenSearch...")
@@ -109,8 +104,15 @@ class ElkRetriever:
                     ),
                     "result": self._get_field(source, "result", "jenkins.result"),
                     "buildTimestamp": source.get("@buildTimestamp"),
-                    "buildDuration": self._get_field(
-                        source, "buildDuration", "jenkins.buildDuration"
+                    "buildDuration": (
+                        round(ms / 60000, 2)
+                        if (
+                            ms := self._get_field(
+                                source, "buildDuration", "jenkins.buildDuration"
+                            )
+                        )
+                        is not None
+                        else None
                     ),
                     "cause": source.get("jenkins.trigger.cause"),
                     "user": source.get("jenkins.trigger.related"),
@@ -123,10 +125,12 @@ class ElkRetriever:
             {"id": "projectName", "type": "text"},
             {"id": "result", "type": "text"},
             {"id": "buildTimestamp", "type": "timestamp"},
-            {"id": "buildDuration", "type": "text"},
+            {"id": "buildDuration", "type": "float8"},
             {"id": "cause", "type": "text"},
             {"id": "user", "type": "text"},
         ]
+        if backpopulate:
+            resource.delete_datastore()
         resource.create_datastore(schema, ("projectName", "buildTimestamp"))
         resource.update_datastore(all_hits)
 
