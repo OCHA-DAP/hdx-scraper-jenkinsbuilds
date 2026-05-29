@@ -138,10 +138,11 @@ class ElkRetriever:
         dump_url = (
             f"{self._configuration.get_hdx_site_url()}/datastore/dump/{resource_id}"
         )
+        resource["url"] = dump_url
+        resource.pop("url_type", None)
+        resource.update_in_hdx()
         file = self._downloader.download_file(dump_url)
         file = file.rename(file.parent / "jenkins_builds.csv")
-        resource.set_file_to_upload(file)
-        resource.update_in_hdx()
         self._upload_to_drive(file)
 
     def _upload_to_drive(self, file: Path) -> None:

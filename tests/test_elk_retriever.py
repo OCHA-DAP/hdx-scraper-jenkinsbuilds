@@ -116,12 +116,31 @@ def test_process_multiple_hits(sample_configuration):
 
 def test_process_uploads_dump(sample_configuration):
     retriever = make_retriever(sample_configuration)
-    resource_mock = run_process(retriever, [make_hit(NESTED_SOURCE)])
-    retriever._downloader.download_file.assert_called_once()
-    resource_mock.set_file_to_upload.assert_called_once_with(
-        Path("/tmp/jenkins_builds.csv")
-    )
+
+    resource_mock = MagicMock()
+    resource_mock.__getitem__ = MagicMock(return_value="test-resource-id")
+    dataset_mock = MagicMock()
+    dataset_mock.get_resource.return_value = resource_mock
+
+    with (
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.scan",
+            return_value=iter([make_hit(NESTED_SOURCE)]),
+        ),
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.Dataset.read_from_hdx",
+            return_value=dataset_mock,
+        ),
+        patch.object(retriever, "_upload_to_drive"),
+    ):
+        retriever.process()
+
+    expected_url = "https://data.humdata.org/datastore/dump/test-resource-id"
+    resource_mock.__setitem__.assert_called_once_with("url", expected_url)
+    resource_mock.pop.assert_called_once_with("url_type", None)
     resource_mock.update_in_hdx.assert_called_once()
+    retriever._downloader.download_file.assert_called_once_with(expected_url)
+    resource_mock.set_file_to_upload.assert_not_called()
 
 
 def _make_drive_service(existing_files):
