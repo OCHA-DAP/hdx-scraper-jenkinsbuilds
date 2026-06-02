@@ -66,6 +66,10 @@ def run_process(retriever, scan_results):
             "hdx.scraper.jenkinsbuilds.elk_retriever.Dataset.read_from_hdx",
             return_value=dataset_mock,
         ),
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.get_size_and_hash",
+            return_value=(0, "test-hash"),
+        ),
         patch.object(retriever, "_upload_to_drive"),
     ):
         retriever.process()
@@ -130,6 +134,10 @@ def test_process_uploads_dump(sample_configuration):
         patch(
             "hdx.scraper.jenkinsbuilds.elk_retriever.Dataset.read_from_hdx",
             return_value=dataset_mock,
+        ),
+        patch(
+            "hdx.scraper.jenkinsbuilds.elk_retriever.get_size_and_hash",
+            return_value=(0, "test-hash"),
         ),
         patch.object(retriever, "_upload_to_drive"),
     ):
