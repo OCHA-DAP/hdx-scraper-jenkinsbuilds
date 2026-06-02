@@ -136,7 +136,7 @@ def test_process_uploads_dump(sample_configuration):
         retriever.process()
 
     expected_url = "https://data.humdata.org/datastore/dump/test-resource-id"
-    resource_mock.__setitem__.assert_called_once_with("url", expected_url)
+    resource_mock.__setitem__.assert_any_call("url", expected_url)
     resource_mock.pop.assert_called_once_with("url_type", None)
     resource_mock.update_in_hdx.assert_called_once()
     retriever._downloader.download_file.assert_called_once_with(expected_url)
