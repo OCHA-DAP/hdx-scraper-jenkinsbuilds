@@ -9,6 +9,7 @@ from googleapiclient.http import MediaFileUpload
 from hdx.api.configuration import Configuration
 from hdx.data.dataset import Dataset
 from hdx.utilities.downloader import Download
+from hdx.utilities.file_hashing import get_size_and_hash
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from opensearchpy.helpers import scan
 
@@ -138,11 +139,18 @@ class ElkRetriever:
         dump_url = (
             f"{self._configuration.get_hdx_site_url()}/datastore/dump/{resource_id}"
         )
-        resource["url"] = dump_url
-        resource.pop("url_type", None)
-        resource.update_in_hdx()
         file = self._downloader.download_file(dump_url)
-        file = file.rename(file.parent / "jenkins_builds.csv")
+        filename = "jenkins_builds.csv"
+        file = file.rename(file.parent / filename)
+        _, file_hash = get_size_and_hash(file, "csv")
+        if resource["hash"] == file_hash:
+            logger.info(f"Not updating file {filename} as hash unchanged.")
+        else:
+            resource["hash"] = file_hash
+            resource.mark_data_updated()
+            resource["url"] = dump_url
+            resource.pop("url_type", None)
+            resource.update_in_hdx()
         self._upload_to_drive(file)
 
     def _upload_to_drive(self, file: Path) -> None:
